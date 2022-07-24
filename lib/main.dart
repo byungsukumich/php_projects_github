@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'constants.dart';
 import 'network_helper.dart';
 import 'repo.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,12 +18,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PHP Project demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+    return ChangeNotifierProvider(
+      create: ((context) => RepoModel()),
+      child: MaterialApp(
+        title: 'PHP Project demo',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: const MyHomePage(title: 'PHP Projects in GitHub'),
       ),
-      home: const MyHomePage(title: 'PHP Projects in GitHub'),
     );
   }
 }
@@ -43,12 +47,6 @@ class _MyHomePageState extends State<MyHomePage> {
     setupDB();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    setState(() {});
-  }
-
   late String path;
   late Database database;
   late var rawData;
@@ -56,16 +54,12 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Repo> repoList = [];
   var showList = false;
   var isLoading = true;
-
-  void toggleShowList() {
-    setState(() {
-      showList = !showList;
-    });
-    addToRepoList();
-  }
+  late RepoModel repoModel;
+  var dbHasData = false;
+  var count;
 
   void setupDB() async {
-    var databasesPath = await getDatabasesPath();
+    // var databasesPath = await getDatabasesPath();
     Directory dbpath = await getApplicationDocumentsDirectory();
     path = join(dbpath.path, 'demo.db');
 
@@ -77,9 +71,22 @@ class _MyHomePageState extends State<MyHomePage> {
           'CREATE TABLE $tableName ($columnId INTEGER PRIMARY KEY, $columnRepoId INTEGER, $columnName TEXT, $columnDescription TEXT, $columnUrl TEXT, $columnStarCount INTEGER, $columnCreatedAt DATETIME, $columnPushedAt DATETIME)');
     });
 
-    var row = await database.rawQuery('SELECT 1 FROM $tableName');
-    if (row.isEmpty) {
+    count = Sqflite.firstIntValue(
+        await database.rawQuery('SELECT COUNT(*) FROM $tableName'));
+
+    print('this is row count: $count');
+
+    if (count == 0) {
       fetchAddData();
+    } else {
+      addToRepoList();
+    }
+  }
+
+  void checkDataAvailable() async {
+    var row = await database.rawQuery('SELECT 1 FROM $tableName');
+    if (row.isNotEmpty) {
+      dbHasData = true;
     }
   }
 
@@ -107,6 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void fetchAddData() async {
+    // if (repoList.isEmpty) {
     rawData = await NetworkHelper().getData();
 
     var repoItems = rawData['items'];
@@ -124,41 +132,42 @@ class _MyHomePageState extends State<MyHomePage> {
       dbItemList.add(dbItem);
       addRecord(dbItem);
     }
-    if (repoList.isNotEmpty) {
-      repoList = [];
-    }
+    // }
+    // if (repoList.isNotEmpty) {
+    //   repoList = [];
+    // }
     addToRepoList();
   }
 
   void refreshRecord() async {
     // Delete a record
+
     await database.rawDelete('DELETE FROM $tableName');
-    fetchAddData();
+
+    if (count == 0) {
+      repoList = [];
+      fetchAddData();
+    }
 
     print('succefully refreshed repo data from github');
   }
 
-  Future<List<Repo>> addToRepoList() async {
-    if (repoList.isEmpty) {
-      List<Map<dynamic, dynamic>> list =
-          await database.rawQuery('SELECT * FROM $tableName');
+  void addToRepoList() async {
+    List<Map<dynamic, dynamic>> list =
+        await database.rawQuery('SELECT * FROM $tableName');
 
-      if (list.isEmpty) {
-        print('empty list!');
-        return [];
-      }
-
-      for (var row in list) {
-        repoList.add(Repo.fromMap(row));
-        print('repo name: ${Repo.fromMap(row).name}');
-      }
-      print('list of repo count : ${repoList.length}');
+    if (list.isEmpty) {
+      print('empty list!');
     }
 
-    setState(() {
-      isLoading = false;
-    });
-    return repoList;
+    for (var row in list) {
+      repoList.add(Repo.fromMap(row));
+      print('repo name: ${Repo.fromMap(row).name}');
+    }
+    print('list of list count : ${list.length}');
+    print('list of repo count : ${repoList.length}');
+
+    repoModel.updateRepo(repoList);
   }
 
   void deleteDB() async {
@@ -172,57 +181,48 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    updateReady() {}
-    // Widget showResult() {
-    //   var result = 'not ready';
-
-    //   setState(() {
-    //     if (repoList.isNotEmpty) {
-    //       result = repoList.first.name;
-    //     }
-    //   });
-    //   return Text(result);
-    // }
+    repoModel = Provider.of<RepoModel>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_forever),
-            tooltip: 'Delete DB',
-            onPressed: deleteDB,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: refreshRecord,
           ),
         ],
         title: Text(widget.title),
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             InkWell(
               onTap: refreshRecord,
               child: const Text(
-                'Reload Data',
+                'Most popular PHP Projects in Github',
               ),
             ),
+            // const SizedBox(
+            //   height: 30,
+            // ),
+            // InkWell(
+            //   onTap: fetchRecord,
+            //   child: const Text(
+            //     'Fetch Data',
+            //   ),
+            // ),
             const SizedBox(
-              height: 30,
+              height: 15,
             ),
-            InkWell(
-              onTap: fetchRecord,
-              child: const Text(
-                'Fetch Data',
-              ),
-            ),
-            const SizedBox(
-              height: 30,
-            ),
-            InkWell(
-              onTap: toggleShowList,
-              child: const Text(
-                'Show Data',
-              ),
-            ),
+            // InkWell(
+            //   onTap: toggleShowList,
+            //   child: const Text(
+            //     'Show Data',
+            //   ),
+            // ),
             // isLoading
             //     ? const CircularProgressIndicator()
             //     : SizedBox(
@@ -241,23 +241,169 @@ class _MyHomePageState extends State<MyHomePage> {
             //           ),
             //         ),
             //       ),
-            if (showList)
-              SizedBox(
-                height: 400,
-                // child: Text('List goes on.. with this ${repoList.first.name}'),
-                child: Center(
-                  child: ListView.builder(
-                    itemCount: repoList.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return ListTile(
-                        leading:
-                            Text(repoList[index].stargazersCount.toString()),
-                        title: Text(repoList[index].name),
-                      );
-                    },
-                  ),
-                ),
-              )
+            // if (showList)
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.8,
+              // child: Text('List goes on.. with this ${repoList.first.name}'),
+              child: Consumer<RepoModel>(
+                builder: ((context, value, _) => ListView.builder(
+                      itemCount: value.getRepo().length,
+                      itemBuilder: (BuildContext context, int index) {
+                        return Card(
+                          elevation: 2,
+                          margin: const EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 5,
+                          ),
+                          child: ListTile(
+                            onTap: (() => showModalBottomSheet(
+                                context: context,
+                                builder: (bCtx) {
+                                  return SizedBox(
+                                    height: MediaQuery.of(context).size.height *
+                                        0.6,
+                                    child: Column(
+                                      children: [
+                                        ListTile(
+                                          leading: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: const [
+                                                Text('Name', style: TextStyle(fontWeight: FontWeight.bold),),
+                                                Text('Repo ID', style: TextStyle(fontWeight: FontWeight.bold),),
+                                              ]),
+                                          title: Row(
+                                            children: [
+                                              Text(value.getRepo()[index].name),
+                                              const SizedBox(
+                                                width: 20,
+                                              ),
+                                              const Icon(
+                                                Icons.star_border,
+                                                size: 16,
+                                              ),
+                                              Text(value
+                                                  .getRepo()[index]
+                                                  .stargazersCount
+                                                  .toString()),
+                                            ],
+                                          ),
+                                          subtitle: Text(value
+                                              .getRepo()[index]
+                                              .id
+                                              .toString()),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Text('Description', style: TextStyle(fontWeight: FontWeight.bold),),
+                                              Text(value
+                                                  .getRepo()[index]
+                                                  .description),
+                                              const SizedBox(
+                                                height: 10,
+                                              ),
+                                              Row(
+                                                children: [
+                                                  const Text('URL: ', style: TextStyle(fontWeight: FontWeight.bold),),
+                                                  Text(value
+                                                      .getRepo()[index]
+                                                      .htmlUrl),
+                                                ],
+                                              ),
+                                              const SizedBox(
+                                                height: 10,
+                                              ),
+                                              Row(
+                                                children: [
+                                                  const Text('Created: ', style: TextStyle(fontWeight: FontWeight.bold),),
+                                                  Text(
+                                                    value
+                                                        .getRepo()[index]
+                                                        .createdAt,
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(
+                                                height: 10,
+                                              ),
+                                              Row(
+                                                children: [
+                                                  const Text('Last pushed: ', style: TextStyle(fontWeight: FontWeight.bold),),
+                                                  Text(value
+                                                      .getRepo()[index]
+                                                      .pushedAt),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                })),
+                            leading: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(value
+                                    .getRepo()[index]
+                                    .stargazersCount
+                                    .toString()),
+                                const Text('stars')
+                              ],
+                            ),
+                            title: Text(value.getRepo()[index].name),
+                            subtitle: Text(
+                                value.getRepo()[index].description.length > 80
+                                    ? value
+                                        .getRepo()[index]
+                                        .description
+                                        .replaceRange(
+                                            80,
+                                            value
+                                                .getRepo()[index]
+                                                .description
+                                                .length,
+                                            '...')
+                                    : value.getRepo()[index].description),
+                          ),
+                        );
+
+                        //     Card(
+                        //   elevation: 5,
+                        //   margin: EdgeInsets.symmetric(
+                        //     vertical: 8,
+                        //     horizontal: 5,
+                        //   ),
+                        //   child: ListTile(
+                        //     leading: CircleAvatar(
+                        //       radius: 30,
+                        //       child: Padding(
+                        //         padding: EdgeInsets.all(6),
+                        //         child: FittedBox(
+                        //           child: Text('\$${transactions[index].amount}'),
+                        //         ),
+                        //       ),
+                        //     ),
+                        //     title: Text(
+                        //       transactions[index].title,
+                        //       style: Theme.of(context).textTheme.title,
+                        //     ),
+                        //     subtitle: Text(
+                        //       DateFormat.yMMMd().format(transactions[index].date),
+                        //     ),
+                        //   ),
+                        // );
+                      },
+                    )),
+              ),
+            )
             // child: FutureBuilder<List<Repo>>(
             //   future: addToRepoList(),
             //   builder: (context, snapshot) {
@@ -285,5 +431,22 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
+  }
+}
+
+class RepoModel extends ChangeNotifier {
+  late List<Repo> repos;
+
+  RepoModel({List<Repo>? newRepos}) {
+    repos = newRepos ?? <Repo>[];
+  }
+
+  void updateRepo(List<Repo> newRepos) {
+    repos = newRepos;
+    notifyListeners();
+  }
+
+  List<Repo> getRepo() {
+    return repos;
   }
 }
