@@ -1,12 +1,12 @@
 import 'dart:io';
-
+import 'constants.dart';
+import 'network_helper.dart';
+import 'repo.dart';
+import 'providers.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'constants.dart';
-import 'network_helper.dart';
-import 'repo.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'PHP Project demo',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          primarySwatch: Colors.green,
         ),
         home: const MyHomePage(title: 'PHP Projects in GitHub'),
       ),
@@ -49,19 +49,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
   late String path;
   late Database database;
-  late var rawData;
+  late dynamic feedData;
   var dbItemList = [];
   List<Repo> repoList = [];
-  var showList = false;
-  var isLoading = true;
   late RepoModel repoModel;
   var dbHasData = false;
-  var count;
+  late DateTime timeStamp;
 
   void setupDB() async {
     // var databasesPath = await getDatabasesPath();
     Directory dbpath = await getApplicationDocumentsDirectory();
-    path = join(dbpath.path, 'demo.db');
+    path = join(dbpath.path, 'repo.db');
 
     // open the database
     database = await openDatabase(path, version: 1,
@@ -71,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
           'CREATE TABLE $tableName ($columnId INTEGER PRIMARY KEY, $columnRepoId INTEGER, $columnName TEXT, $columnDescription TEXT, $columnUrl TEXT, $columnStarCount INTEGER, $columnCreatedAt DATETIME, $columnPushedAt DATETIME)');
     });
 
-    count = Sqflite.firstIntValue(
+    var count = Sqflite.firstIntValue(
         await database.rawQuery('SELECT COUNT(*) FROM $tableName'));
 
     print('this is row count: $count');
@@ -95,9 +93,6 @@ class _MyHomePageState extends State<MyHomePage> {
     // Get the records
     if (isActive) {
       List<Map> list = await database.rawQuery('SELECT * FROM $tableName');
-      print(list);
-      // print('this is rawData: $rawData');
-      // print('this is repo list: $dbItemList');
     } else {
       print('no records in db');
     }
@@ -114,10 +109,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void fetchAddData() async {
-    // if (repoList.isEmpty) {
-    rawData = await NetworkHelper().getData();
+    feedData = await NetworkHelper().getData();
 
-    var repoItems = rawData['items'];
+    var repoItems = feedData['items'];
 
     for (var item in repoItems) {
       List<dynamic> dbItem = [
@@ -132,10 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
       dbItemList.add(dbItem);
       addRecord(dbItem);
     }
-    // }
-    // if (repoList.isNotEmpty) {
-    //   repoList = [];
-    // }
+
     addToRepoList();
   }
 
@@ -144,9 +135,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
     await database.rawDelete('DELETE FROM $tableName');
 
+    var count = Sqflite.firstIntValue(
+        await database.rawQuery('SELECT COUNT(*) FROM $tableName'));
+
     if (count == 0) {
+      print('table data is erased');
       repoList = [];
       fetchAddData();
+      var timeStamp = DateTime.now();
+      var formatedTime =
+          "${timeStamp.year.toString()}-${timeStamp.month.toString().padLeft(2, '0')}-${timeStamp.day.toString().padLeft(2, '0')} ${timeStamp.hour.toString().padLeft(2, '0')}:${timeStamp.minute.toString().padLeft(2, '0')}:${timeStamp.second.toString().padLeft(2, '0')}";
+      repoModel.updateTimeStamp(formatedTime);
     }
 
     print('succefully refreshed repo data from github');
@@ -168,15 +167,6 @@ class _MyHomePageState extends State<MyHomePage> {
     print('list of repo count : ${repoList.length}');
 
     repoModel.updateRepo(repoList);
-  }
-
-  void deleteDB() async {
-    await deleteDatabase(path);
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   @override
@@ -201,50 +191,19 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             InkWell(
               onTap: refreshRecord,
-              child: const Text(
-                'Most popular PHP Projects in Github',
+              child: Consumer<RepoModel>(
+                builder: (context, repo, _) => repo.getTimeStamp() == ''
+                    ? const Text(
+                        'Most popular PHP Projects in Github',
+                      )
+                    : Text('Last updated at ${repo.getTimeStamp()}'),
               ),
             ),
-            // const SizedBox(
-            //   height: 30,
-            // ),
-            // InkWell(
-            //   onTap: fetchRecord,
-            //   child: const Text(
-            //     'Fetch Data',
-            //   ),
-            // ),
             const SizedBox(
               height: 15,
             ),
-            // InkWell(
-            //   onTap: toggleShowList,
-            //   child: const Text(
-            //     'Show Data',
-            //   ),
-            // ),
-            // isLoading
-            //     ? const CircularProgressIndicator()
-            //     : SizedBox(
-            //         height: 400,
-            //         // child: Text('List goes on.. with this ${repoList.first.name}'),
-            //         child: Center(
-            //           child: ListView.builder(
-            //             itemCount: repoList.length,
-            //             itemBuilder: (BuildContext context, int index) {
-            //               return ListTile(
-            //                 leading: Text(
-            //                     repoList[index].stargazersCount.toString()),
-            //                 title: Text(repoList[index].name),
-            //               );
-            //             },
-            //           ),
-            //         ),
-            //       ),
-            // if (showList)
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.8,
-              // child: Text('List goes on.. with this ${repoList.first.name}'),
               child: Consumer<RepoModel>(
                 builder: ((context, value, _) => ListView.builder(
                       itemCount: value.getRepo().length,
@@ -256,9 +215,46 @@ class _MyHomePageState extends State<MyHomePage> {
                             horizontal: 5,
                           ),
                           child: ListTile(
+                            leading: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(value
+                                    .getRepo()[index]
+                                    .stargazersCount
+                                    .toString()),
+                                const Icon(
+                                  Icons.star_border,
+                                  color: Colors.lightGreen,
+                                )
+                              ],
+                            ),
+                            title: Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Text(
+                                value.getRepo()[index].name,
+                                style: boldStyle,
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(0, 5.0, 0, 5.0),
+                              child: Text(
+                                  value.getRepo()[index].description.length > 80
+                                      ? value
+                                          .getRepo()[index]
+                                          .description
+                                          .replaceRange(
+                                              80,
+                                              value
+                                                  .getRepo()[index]
+                                                  .description
+                                                  .length,
+                                              '...')
+                                      : value.getRepo()[index].description),
+                            ),
                             onTap: (() => showModalBottomSheet(
                                 context: context,
-                                builder: (bCtx) {
+                                builder: (_) {
                                   return SizedBox(
                                     height: MediaQuery.of(context).size.height *
                                         0.6,
@@ -271,17 +267,25 @@ class _MyHomePageState extends State<MyHomePage> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: const [
-                                                Text('Name', style: TextStyle(fontWeight: FontWeight.bold),),
-                                                Text('Repo ID', style: TextStyle(fontWeight: FontWeight.bold),),
+                                                Text(
+                                                  genericName,
+                                                  style: boldStyle,
+                                                ),
                                               ]),
                                           title: Row(
                                             children: [
-                                              Text(value.getRepo()[index].name),
+                                              Text(
+                                                value.getRepo()[index].name,
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.green),
+                                              ),
                                               const SizedBox(
                                                 width: 20,
                                               ),
                                               const Icon(
                                                 Icons.star_border,
+                                                color: Colors.lightGreen,
                                                 size: 16,
                                               ),
                                               Text(value
@@ -290,19 +294,31 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   .toString()),
                                             ],
                                           ),
-                                          subtitle: Text(value
-                                              .getRepo()[index]
-                                              .id
-                                              .toString()),
+                                          subtitle: Row(
+                                            children: [
+                                              const Text(
+                                                genericRepoId,
+                                              ),
+                                              Text(value
+                                                  .getRepo()[index]
+                                                  .id
+                                                  .toString()),
+                                            ],
+                                          ),
                                         ),
                                         Padding(
-                                          padding: const EdgeInsets.all(16.0),
-                                          
+                                          padding: const EdgeInsets.fromLTRB(16, 2, 16, 16),
                                           child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              const Text('Description', style: TextStyle(fontWeight: FontWeight.bold),),
+                                              const Text(
+                                                genericDescription,
+                                                style: boldStyle,
+                                              ),
+                                              const SizedBox(
+                                                height: 2,
+                                              ),
                                               Text(value
                                                   .getRepo()[index]
                                                   .description),
@@ -311,10 +327,18 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                               Row(
                                                 children: [
-                                                  const Text('URL: ', style: TextStyle(fontWeight: FontWeight.bold),),
-                                                  Text(value
-                                                      .getRepo()[index]
-                                                      .htmlUrl),
+                                                  const Text(
+                                                    genericUrl,
+                                                    style: boldStyle,
+                                                  ),
+                                                  Expanded(
+                                                    child: Text(
+                                                      value
+                                                          .getRepo()[index]
+                                                          .htmlUrl,
+                                                      softWrap: true,
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                               const SizedBox(
@@ -322,7 +346,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                               Row(
                                                 children: [
-                                                  const Text('Created: ', style: TextStyle(fontWeight: FontWeight.bold),),
+                                                  const Text(
+                                                    genericCreatedAt,
+                                                    style: boldStyle,
+                                                  ),
                                                   Text(
                                                     value
                                                         .getRepo()[index]
@@ -335,7 +362,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                               Row(
                                                 children: [
-                                                  const Text('Last pushed: ', style: TextStyle(fontWeight: FontWeight.bold),),
+                                                  const Text(
+                                                    genericLastPushedAt,
+                                                    style: boldStyle,
+                                                  ),
                                                   Text(value
                                                       .getRepo()[index]
                                                       .pushedAt),
@@ -348,105 +378,15 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ),
                                   );
                                 })),
-                            leading: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(value
-                                    .getRepo()[index]
-                                    .stargazersCount
-                                    .toString()),
-                                const Text('stars')
-                              ],
-                            ),
-                            title: Text(value.getRepo()[index].name),
-                            subtitle: Text(
-                                value.getRepo()[index].description.length > 80
-                                    ? value
-                                        .getRepo()[index]
-                                        .description
-                                        .replaceRange(
-                                            80,
-                                            value
-                                                .getRepo()[index]
-                                                .description
-                                                .length,
-                                            '...')
-                                    : value.getRepo()[index].description),
                           ),
                         );
-
-                        //     Card(
-                        //   elevation: 5,
-                        //   margin: EdgeInsets.symmetric(
-                        //     vertical: 8,
-                        //     horizontal: 5,
-                        //   ),
-                        //   child: ListTile(
-                        //     leading: CircleAvatar(
-                        //       radius: 30,
-                        //       child: Padding(
-                        //         padding: EdgeInsets.all(6),
-                        //         child: FittedBox(
-                        //           child: Text('\$${transactions[index].amount}'),
-                        //         ),
-                        //       ),
-                        //     ),
-                        //     title: Text(
-                        //       transactions[index].title,
-                        //       style: Theme.of(context).textTheme.title,
-                        //     ),
-                        //     subtitle: Text(
-                        //       DateFormat.yMMMd().format(transactions[index].date),
-                        //     ),
-                        //   ),
-                        // );
                       },
                     )),
               ),
             )
-            // child: FutureBuilder<List<Repo>>(
-            //   future: addToRepoList(),
-            //   builder: (context, snapshot) {
-            //     if (snapshot.connectionState == ConnectionState.done) {
-            //       if (snapshot.hasData) {
-            //         return Center(
-            //           child: Text(snapshot.data?.first.name ?? ''),
-            //         );
-            //       } else if (snapshot.hasError) {
-            //         return Center(child: Text('Error!: ${snapshot.error.toString()}'),);
-            //       } else {
-            //         return const Center(child: Text('What doe..'),);
-            //       }
-            //     }
-            //     return const SizedBox(
-            //           width: 60,
-            //           height: 60,
-            //           child: CircularProgressIndicator(),
-            //         );
-
-            //   },
-            // ),
-            //   ),
           ],
         ),
       ),
     );
-  }
-}
-
-class RepoModel extends ChangeNotifier {
-  late List<Repo> repos;
-
-  RepoModel({List<Repo>? newRepos}) {
-    repos = newRepos ?? <Repo>[];
-  }
-
-  void updateRepo(List<Repo> newRepos) {
-    repos = newRepos;
-    notifyListeners();
-  }
-
-  List<Repo> getRepo() {
-    return repos;
   }
 }
