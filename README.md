@@ -15,19 +15,15 @@ Packages used:
 
 ## How it works - files in MVC pattern
 
-View
- main : entry point and responsible for rendering views
+main : entry point and responsible for rendering views (View)
  
-Controller
- db_helper : creating database and table, then calling network_helper to fetch data for producing repo list
- network_helper : getting json feed from Github Search api - top 30 results (with default per_page parameter)
+db_helper : creating database and table, then calling network_helper to fetch data for producing repo list (Controller)
+network_helper : getting json feed from Github Search api - top 30 results with default per_page parameter (Controller)
  
-Model/Data
- repo : Repository(Repo) model and constructors
- providers : repo model's state management
+repo : Repository(Repo) model and constructors (Model/Data)
+providers : repo model's state management (Model/Data)
  
-Util
- constants : listing static variables
+constants : listing static variables (Util)
 
 
 ## Flutter in general
