@@ -6,7 +6,7 @@ An app that shows most popular PHP projects written in PHP
 
 ## Installation note
 
-Flutter version : 2.10.5
+Flutter version : 2.10.5 / SDK version >=2.16.2
 
 Packages used:
  - http : getting json data from github api
