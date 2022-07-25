@@ -2,8 +2,7 @@
 
 An app that shows most popular PHP projects written in PHP 
 
-![IMG_2575](https://user-images.githubusercontent.com/92888762/180819188-1b7b9e4e-05f9-42e4-886d-348adb9a656e.PNG)
-![IMG_2576](https://user-images.githubusercontent.com/92888762/180819216-e04908d7-f235-4569-a408-0584ff13d8bc.PNG)
+<img src="https://user-images.githubusercontent.com/92888762/180819188-1b7b9e4e-05f9-42e4-886d-348adb9a656e.PNG" width="400" />.   <img src="https://user-images.githubusercontent.com/92888762/180819216-e04908d7-f235-4569-a408-0584ff13d8bc.PNG" width="400" />
 
 ## Installation note
 
