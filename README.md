@@ -15,13 +15,13 @@ Packages used:
 
 ## How it works - files in MVC pattern
 
-main : entry point and responsible for rendering views (View)
+main : entry point and responsible for rendering views (View). 
  
-db_helper : creating database and table, then calling network_helper to fetch data for producing repo list (Controller)
-network_helper : getting json feed from Github Search api - top 30 results with default per_page parameter (Controller)
+db_helper : creating database and table, then calling network_helper to fetch data for producing repo list (Controller). 
+network_helper : getting json feed from Github Search api - top 30 results with default per_page parameter (Controller). 
  
-repo : Repository(Repo) model and constructors (Model/Data)
-providers : repo model's state management (Model/Data)
+repo : Repository(Repo) model and constructors (Model/Data). 
+providers : repo model's state management (Model/Data). 
  
 constants : listing static variables (Util)
 
