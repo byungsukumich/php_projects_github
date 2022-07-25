@@ -13,20 +13,6 @@ class Repo extends ChangeNotifier{
   Repo(this.id, this.name, this.description, this.htmlUrl, this.stargazersCount,
       this.createdAt, this.pushedAt);
 
-  Map<String, dynamic> toMap() {
-    var map = <String, dynamic>{
-      columnRepoId: id,
-      columnName: name,
-      columnDescription: description,
-      columnUrl: htmlUrl,
-      columnStarCount: stargazersCount,
-      columnCreatedAt: createdAt,
-      columnPushedAt: pushedAt,
-    };
-
-    return map;
-  }
-
   Repo.fromMap(Map<dynamic, dynamic> map) {
     id = map[columnRepoId];
     name = map[columnName];
@@ -37,4 +23,5 @@ class Repo extends ChangeNotifier{
     pushedAt = map[columnPushedAt];
 
   }
+
 }
