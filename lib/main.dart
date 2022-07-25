@@ -19,6 +19,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.green,
         ),
+        debugShowCheckedModeBanner: false,
         home: const RepoListHome(title: appTitle),
       ),
     );
@@ -40,11 +41,13 @@ class _RepoListHomeState extends State<RepoListHome> {
   @override
   void initState() {
     super.initState();
+    // calling to create repo.db and fetching data for repo model
     dbHelper.setupDB();
   }
 
   @override
   Widget build(BuildContext context) {
+    // keep track of repo model changes to update UI via provider
     dbHelper.repoModel = Provider.of<RepoModel>(context, listen: false);
 
     return Scaffold(
@@ -79,184 +82,189 @@ class _RepoListHomeState extends State<RepoListHome> {
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.8,
               child: Consumer<RepoModel>(
-                builder: ((context, value, _) => ListView.builder(
-                      itemCount: value.getRepo().length,
-                      itemBuilder: (BuildContext context, int index) {
-                        return Card(
-                          elevation: 2,
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 2,
-                            horizontal: 5,
-                          ),
-                          child: ListTile(
-                            leading: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(value
-                                    .getRepo()[index]
-                                    .stargazersCount
-                                    .toString()),
-                                const Icon(
-                                  Icons.star_border,
-                                  color: Colors.lightGreen,
-                                )
-                              ],
+                builder: ((context, value, _) => value.getRepo().isEmpty
+                    ? const Center(child: Text(genericFetchStatus))
+                    : ListView.builder(
+                        itemCount: value.getRepo().length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 5,
                             ),
-                            title: Padding(
-                              padding: const EdgeInsets.only(top: 10),
-                              child: Text(
-                                value.getRepo()[index].name,
-                                style: boldStyle,
+                            child: ListTile(
+                              leading: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(value
+                                      .getRepo()[index]
+                                      .stargazersCount
+                                      .toString()),
+                                  const Icon(
+                                    Icons.star_border,
+                                    color: Colors.lightGreen,
+                                  )
+                                ],
                               ),
-                            ),
-                            subtitle: Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(0, 5.0, 0, 5.0),
-                              child: Text(
-                                  value.getRepo()[index].description.length > 80
-                                      ? value
-                                          .getRepo()[index]
-                                          .description
-                                          .replaceRange(
-                                              80,
-                                              value
-                                                  .getRepo()[index]
-                                                  .description
-                                                  .length,
-                                              '...')
-                                      : value.getRepo()[index].description),
-                            ),
-                            onTap: (() => showModalBottomSheet(
-                                context: context,
-                                builder: (_) {
-                                  return SizedBox(
-                                    height: MediaQuery.of(context).size.height *
-                                        0.6,
-                                    child: Column(
-                                      children: [
-                                        ListTile(
-                                          leading: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
+                              title: Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Text(
+                                  value.getRepo()[index].name,
+                                  style: boldStyle,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(0, 5.0, 0, 5.0),
+                                child: Text(
+                                    value.getRepo()[index].description.length >
+                                            80
+                                        ? value
+                                            .getRepo()[index]
+                                            .description
+                                            .replaceRange(
+                                                80,
+                                                value
+                                                    .getRepo()[index]
+                                                    .description
+                                                    .length,
+                                                '...')
+                                        : value.getRepo()[index].description),
+                              ),
+                              onTap: (() => showModalBottomSheet(
+                                  context: context,
+                                  builder: (_) {
+                                    return SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.6,
+                                      child: Column(
+                                        children: [
+                                          ListTile(
+                                            leading: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: const [
+                                                  Text(
+                                                    genericName,
+                                                    style: boldStyle,
+                                                  ),
+                                                ]),
+                                            title: Row(
+                                              children: [
+                                                Text(
+                                                  value.getRepo()[index].name,
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.green),
+                                                ),
+                                                const SizedBox(
+                                                  width: 20,
+                                                ),
+                                                const Icon(
+                                                  Icons.star_border,
+                                                  color: Colors.lightGreen,
+                                                  size: 16,
+                                                ),
+                                                Text(value
+                                                    .getRepo()[index]
+                                                    .stargazersCount
+                                                    .toString()),
+                                              ],
+                                            ),
+                                            subtitle: Row(
+                                              children: [
+                                                const Text(
+                                                  genericRepoId,
+                                                ),
+                                                Text(value
+                                                    .getRepo()[index]
+                                                    .id
+                                                    .toString()),
+                                              ],
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                16, 2, 16, 16),
+                                            child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
-                                              children: const [
-                                                Text(
-                                                  genericName,
+                                              children: [
+                                                const Text(
+                                                  genericDescription,
                                                   style: boldStyle,
                                                 ),
-                                              ]),
-                                          title: Row(
-                                            children: [
-                                              Text(
-                                                value.getRepo()[index].name,
-                                                style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.green),
-                                              ),
-                                              const SizedBox(
-                                                width: 20,
-                                              ),
-                                              const Icon(
-                                                Icons.star_border,
-                                                color: Colors.lightGreen,
-                                                size: 16,
-                                              ),
-                                              Text(value
-                                                  .getRepo()[index]
-                                                  .stargazersCount
-                                                  .toString()),
-                                            ],
-                                          ),
-                                          subtitle: Row(
-                                            children: [
-                                              const Text(
-                                                genericRepoId,
-                                              ),
-                                              Text(value
-                                                  .getRepo()[index]
-                                                  .id
-                                                  .toString()),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              16, 2, 16, 16),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              const Text(
-                                                genericDescription,
-                                                style: boldStyle,
-                                              ),
-                                              const SizedBox(
-                                                height: 2,
-                                              ),
-                                              Text(value
-                                                  .getRepo()[index]
-                                                  .description),
-                                              const SizedBox(
-                                                height: 10,
-                                              ),
-                                              Row(
-                                                children: [
-                                                  const Text(
-                                                    genericUrl,
-                                                    style: boldStyle,
-                                                  ),
-                                                  Expanded(
-                                                    child: Text(
+                                                const SizedBox(
+                                                  height: 2,
+                                                ),
+                                                Text(value
+                                                    .getRepo()[index]
+                                                    .description),
+                                                const SizedBox(
+                                                  height: 10,
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    const Text(
+                                                      genericUrl,
+                                                      style: boldStyle,
+                                                    ),
+                                                    Expanded(
+                                                      child: Text(
+                                                        value
+                                                            .getRepo()[index]
+                                                            .htmlUrl,
+                                                        softWrap: true,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(
+                                                  height: 10,
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    const Text(
+                                                      genericCreatedAt,
+                                                      style: boldStyle,
+                                                    ),
+                                                    Text(
                                                       value
                                                           .getRepo()[index]
-                                                          .htmlUrl,
-                                                      softWrap: true,
+                                                          .createdAt,
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(
-                                                height: 10,
-                                              ),
-                                              Row(
-                                                children: [
-                                                  const Text(
-                                                    genericCreatedAt,
-                                                    style: boldStyle,
-                                                  ),
-                                                  Text(
-                                                    value
+                                                  ],
+                                                ),
+                                                const SizedBox(
+                                                  height: 10,
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    const Text(
+                                                      genericLastPushedAt,
+                                                      style: boldStyle,
+                                                    ),
+                                                    Text(value
                                                         .getRepo()[index]
-                                                        .createdAt,
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(
-                                                height: 10,
-                                              ),
-                                              Row(
-                                                children: [
-                                                  const Text(
-                                                    genericLastPushedAt,
-                                                    style: boldStyle,
-                                                  ),
-                                                  Text(value
-                                                      .getRepo()[index]
-                                                      .pushedAt),
-                                                ],
-                                              ),
-                                            ],
+                                                        .pushedAt),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                })),
-                          ),
-                        );
-                      },
-                    )),
+                                        ],
+                                      ),
+                                    );
+                                  })),
+                            ),
+                          );
+                        },
+                      )),
               ),
             )
           ],

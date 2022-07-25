@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'constants.dart';
 
-class Repo extends ChangeNotifier{
+class Repo extends ChangeNotifier {
   late int id;
   late String name;
   late String description;
@@ -21,7 +21,5 @@ class Repo extends ChangeNotifier{
     stargazersCount = map[columnStarCount];
     createdAt = map[columnCreatedAt];
     pushedAt = map[columnPushedAt];
-
   }
-
 }

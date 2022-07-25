@@ -17,7 +17,8 @@ const String genericDescription = 'Description: ';
 const String genericUrl = 'URL: ';
 const String genericCreatedAt = 'Created: ';
 const String genericLastPushedAt = 'Last pushed: ';
+const String genericFetchStatus = 'Fetching the feed.. Please wait or try again later';
 
 const String appTitle = 'PHP Projects in GitHub';
-const String appBarTitle = 'Most popular PHP Projects in Github';
+const String appBarTitle = 'Touch to Refresh or Click the icon';
 const TextStyle boldStyle = TextStyle(fontWeight: FontWeight.bold);
